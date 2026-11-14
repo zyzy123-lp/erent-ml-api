@@ -7,26 +7,31 @@ app = FastAPI(title="e-Rent Smart Package Recommender")
 
 EVENT_MAP = {"Wedding": 0, "Birthday": 1, "Debut": 2, "Corporate": 3, "Other": 4}
 
+# Training features: (event_code, budget, guest_count, item_count, has_tent, has_sound)
 X_train = np.array((
-    (0, 25000, 5, 1, 1),
-    (0, 15000, 3, 1, 0),
-    (1, 10000, 4, 0, 1),
-    (1, 5000, 2, 0, 0),
-    (2, 20000, 4, 1, 1),
-    (3, 18000, 3, 0, 1),
-    (4, 8000, 2, 0, 0),
+    (0, 20000, 50, 4, 1, 0),   # Wedding -> Package 5
+    (1, 20000, 50, 3, 1, 0),   # Birthday -> Package 5
+    (2, 20000, 60, 4, 1, 0),   # Debut -> Package 5
+    (3, 15000, 40, 3, 1, 1),   # Corporate -> Package 6
+    (4, 15000, 40, 3, 1, 1),   # Other -> Package 6
+    (2, 30000, 100, 5, 0, 0),  # Debut (Large) -> Package 7
+    (0, 30000, 120, 5, 0, 0),  # Wedding (Large) -> Package 7
 ))
-y_train = np.array((1, 2, 3, 4, 5, 6, 7))
+
+# Real package_id values from your erent_db
+y_train = np.array((5, 5, 5, 6, 6, 7, 7))
 
 model = RandomForestClassifier(n_estimators=50, random_state=42)
 model.fit(X_train, y_train)
 
-TENT_IDS = {1, 2}
-SOUND_IDS = {5, 6}
+# Real equipment_id values from your erent_db
+TENT_IDS = {3, 8}
+SOUND_IDS = {4}
 
 class RecommendRequest(BaseModel):
     event_type: str = "Other"
     budget: float = 0.0
+    guest_count: int = 0
     cart_equipment_ids: tuple = ()
 
 @app.get("/")
@@ -39,7 +44,15 @@ def recommend_packages(req: RecommendRequest):
     has_tent = 1 if any(eid in TENT_IDS for eid in req.cart_equipment_ids) else 0
     has_sound = 1 if any(eid in SOUND_IDS for eid in req.cart_equipment_ids) else 0
 
-    features = np.array(((event_code, req.budget, len(req.cart_equipment_ids), has_tent, has_sound),))
+    features = np.array(((
+        event_code,
+        req.budget,
+        req.guest_count,
+        len(req.cart_equipment_ids),
+        has_tent,
+        has_sound
+    ),))
+
     probs = model.predict_proba(features).flatten()
     classes = model.classes_
 
