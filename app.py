@@ -8,10 +8,17 @@ app = FastAPI(title="e-Rent Smart Package Recommender")
 
 EVENT_MAP = {"Wedding": 0, "Birthday": 1, "Debut": 2, "Corporate": 3, "Other": 4}
 
-# Sample training data: [event_code, budget, item_count, has_tent, has_sound] -> package_id
-X_train = np.array([,  # Wedding -> Package 1,  # Wedding -> Package 2,  # Birthday -> Package 3,  # Birthday -> Package 4,  # Debut -> Package 5,  # Corporate -> Package 6,  # Other -> Package 7
+# Training data: [event_code, budget, item_count, has_tent, has_sound]
+X_train = np.array([,
+ ,
+ ,
+ ,
+ ,
+ ,
+    [4, 5000, 2, 0, 0]
 ])
-y_train = np.array()
+
+y_train = np.array([1, 2, 3, 4, 5, 6, 7])
 
 model = RandomForestClassifier(n_estimators=50, random_state=42)
 model.fit(X_train, y_train)
@@ -32,7 +39,7 @@ def recommend_packages(req: RecommendRequest):
     has_sound = 1 if any(eid in req.cart_equipment_ids for eid in) else 0
 
     features = np.array([[event_code, req.budget, len(req.cart_equipment_ids), has_tent, has_sound]])
-    probs = model.predict_proba(features)
+    probs = model.predict_proba(features)[0]
     classes = model.classes_
 
     ranked_indices = np.argsort(probs)[::-1]
